@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
-var path = require('path'),
-    fs = require('fs'),
-    sys = require('sys');
+var file = require('file'),
+    system = require('system');
 
-require.paths.unshift(path.join(__dirname, '..', 'lib'));
+if (typeof __dirname == 'undefined') {
+    var __dirname = file.dirname(module.path);
+}
+require.paths.unshift(file.join(__dirname, '..', 'lib'));
 
 var less = require('less');
 var args = process.argv.slice(1);
@@ -23,7 +25,7 @@ args = args.filter(function (arg) {
     switch (arg) {
         case 'v':
         case 'version':
-            sys.puts("lessc " + less.version.join('.') + " (LESS Compiler) [JavaScript]");
+            system.print("lessc " + less.version.join('.') + " (LESS Compiler) [JavaScript]");
             process.exit(0);
         case 'verbose':
             options.verbose = true;
@@ -34,7 +36,7 @@ args = args.filter(function (arg) {
             break;
         case 'h':
         case 'help':
-            sys.puts("usage: lessc source [destination]");
+            system.print("usage: lessc source [destination]");
             process.exit(0);
         case 'x':
         case 'compress':
@@ -48,51 +50,41 @@ args = args.filter(function (arg) {
 
 var input = args[1];
 if (input && input[0] != '/') {
-    input = path.join(process.cwd(), input);
+    input = file.join(process.cwd(), input);
 }
 var output = args[2];
 if (output && output[0] != '/') {
-    output = path.join(process.cwd(), output);
+    output = file.join(process.cwd(), output);
 }
 
 var css, fd, tree;
 
 if (! input) {
-    sys.puts("lessc: no input files");
+    system.print("lessc: no input files");
     process.exit(1);
 }
 
-fs.stat(input, function (e, stats) {
-    if (e) {
-        sys.puts("lessc: " + e.message);
+// new stuff:
+var data = file.read(filename);
+new(less.Parser)({
+    paths: [file.dirname(input)],
+    optimization: options.optimization,
+    filename: input
+}).parse(data, function (err, tree) {
+    if (err) {
+        less.writeError(err, options);
         process.exit(1);
+    } else {
+        try {
+            css = tree.toCSS({ compress: options.compress });
+            if (output) {
+                file.write(output, css);
+            } else {
+                system.print(css);
+            }
+        } catch (e) {
+            less.writeError(e, options);
+            process.exit(2);
+        }
     }
-    fs.open(input, process.O_RDONLY, stats.mode, function (e, fd) {
-        fs.read(fd, stats.size, 0, "utf8", function (e, data) {
-            new(less.Parser)({
-                paths: [path.dirname(input)],
-                optimization: options.optimization,
-                filename: input
-            }).parse(data, function (err, tree) {
-                if (err) {
-                    less.writeError(err, options);
-                    process.exit(1);
-                } else {
-                    try {
-                        css = tree.toCSS({ compress: options.compress });
-                        if (output) {
-                            fd = fs.openSync(output, "w");
-                            fs.writeSync(fd, css, 0, "utf8");
-                        } else {
-                            sys.print(css);
-                        }
-                    } catch (e) {
-                        less.writeError(e, options);
-                        process.exit(2);
-                    }
-                }
-            });
-        });
-    });
 });
-
