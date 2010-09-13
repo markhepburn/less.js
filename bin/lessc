@@ -1,6 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env js
 
 var file = require('file'),
+    os = require('os'),
     system = require('system');
 
 if (typeof __dirname == 'undefined') {
@@ -8,8 +9,8 @@ if (typeof __dirname == 'undefined') {
 }
 require.paths.unshift(file.join(__dirname, '..', 'lib'));
 
-var less = require('less');
-var args = process.argv.slice(1);
+var less = require('less/index');
+var args = system.args.slice(1);
 var options = {
     compress: false,
     optimization: 1,
@@ -26,7 +27,7 @@ args = args.filter(function (arg) {
         case 'v':
         case 'version':
             system.print("lessc " + less.version.join('.') + " (LESS Compiler) [JavaScript]");
-            process.exit(0);
+            os.exit(0);
         case 'verbose':
             options.verbose = true;
             break;
@@ -37,7 +38,7 @@ args = args.filter(function (arg) {
         case 'h':
         case 'help':
             system.print("usage: lessc source [destination]");
-            process.exit(0);
+            os.exit(0);
         case 'x':
         case 'compress':
             options.compress = true;
@@ -50,18 +51,18 @@ args = args.filter(function (arg) {
 
 var input = args[1];
 if (input && input[0] != '/') {
-    input = file.join(process.cwd(), input);
+    input = file.join(file.cwd(), input);
 }
 var output = args[2];
 if (output && output[0] != '/') {
-    output = file.join(process.cwd(), output);
+    output = file.join(file.cwd(), output);
 }
 
 var css, fd, tree;
 
 if (! input) {
     system.print("lessc: no input files");
-    process.exit(1);
+    os.exit(1);
 }
 
 // new stuff:
@@ -73,7 +74,7 @@ new(less.Parser)({
 }).parse(data, function (err, tree) {
     if (err) {
         less.writeError(err, options);
-        process.exit(1);
+        os.exit(1);
     } else {
         try {
             css = tree.toCSS({ compress: options.compress });
@@ -84,7 +85,7 @@ new(less.Parser)({
             }
         } catch (e) {
             less.writeError(e, options);
-            process.exit(2);
+            os.exit(2);
         }
     }
 });
