@@ -49,11 +49,11 @@ args = args.filter(function (arg) {
     }
 });
 
-var input = args[1];
+var input = args[0];
 if (input && input[0] != '/') {
     input = file.join(file.cwd(), input);
 }
-var output = args[2];
+var output = args[1];
 if (output && output[0] != '/') {
     output = file.join(file.cwd(), output);
 }
@@ -66,7 +66,7 @@ if (! input) {
 }
 
 // new stuff:
-var data = file.read(filename);
+var data = file.read(input);
 new(less.Parser)({
     paths: [file.dirname(input)],
     optimization: options.optimization,
