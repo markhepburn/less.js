@@ -14,7 +14,9 @@ var args = system.args.slice(1);
 var options = {
     compress: false,
     optimization: 1,
-    silent: false
+    silent: false,
+    loop: false,
+    loopInterval: 2 // seconds
 };
 
 args = args.filter(function (arg) {
@@ -43,6 +45,10 @@ args = args.filter(function (arg) {
         case 'compress':
             options.compress = true;
             break;
+        case 'l':
+        case 'loop':
+            options.loop = true;
+            break;
         case 'O0': options.optimization = 0; break;
         case 'O1': options.optimization = 1; break;
         case 'O2': options.optimization = 2; break;
@@ -65,27 +71,41 @@ if (! input) {
     os.exit(1);
 }
 
-// new stuff:
-var data = file.read(input);
-new(less.Parser)({
-    paths: [file.dirname(input)],
-    optimization: options.optimization,
-    filename: input
-}).parse(data, function (err, tree) {
-    if (err) {
-        less.writeError(err, options);
-        os.exit(1);
-    } else {
-        try {
-            css = tree.toCSS({ compress: options.compress });
-            if (output) {
-                file.write(output, css);
-            } else {
-                system.print(css);
-            }
-        } catch (e) {
-            less.writeError(e, options);
-            os.exit(2);
-        }
+// There's no 'stat', so instead of checking modification time when looping
+// we'll just compare input strings:
+var oldData = null;
+
+while (true) {
+    var data = file.read(input);
+    if (data == oldData) {
+        os.sleep(options.loopInterval);
+        continue;
     }
-});
+    oldData = data;
+    new(less.Parser)({
+        paths: [file.dirname(input)],
+        optimization: options.optimization,
+        filename: input
+    }).parse(data, function (err, tree) {
+        if (err) {
+            less.writeError(err, options);
+            os.exit(1);
+        } else {
+            try {
+                css = tree.toCSS({ compress: options.compress });
+                if (output) {
+                    file.write(output, css);
+                } else {
+                    system.print(css);
+                }
+            } catch (e) {
+                less.writeError(e, options);
+                os.exit(2);
+            }
+        }
+    });
+    if (!options.loop) {
+        // explicit exit if we're not looping:
+        os.exit(0);
+    }
+}
